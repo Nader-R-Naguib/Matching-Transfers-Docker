@@ -1,4 +1,4 @@
-# 🏦 AI-Powered Transfer Reconciliation System
+# 🏦 OCR-Powered Transfer Reconciliation System
 
 An automated, containerized backend system that uses vision AI (SuryaOCR) and Large Language Models (Llama-3 via Groq) to extract transaction data from user-uploaded bank transfer screenshots and strictly reconcile them against official bank statements.
 
