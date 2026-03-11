@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+python-multipart
+pandas
+openpyxl
+mysql-connector-python
+groq
+surya-ocr==0.17.1
+python-dotenv
+Pillow
+requests
+transformers>=4.42.0,<5.0.0

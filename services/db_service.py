@@ -1,12 +1,13 @@
 import mysql.connector
 from mysql.connector import Error
 import logging
+from configs.configs import DB_HOST, DB_NAME, DB_USER, DB_PASSWORD
 
 DB_CONFIG = {
-    'host': 'localhost',
-    'database': 'transfer_reconciliation',
-    'user': 'root', 
-    'password': 'p@ssword' 
+    'host': DB_HOST,
+    'database': DB_NAME,
+    'user': DB_USER, 
+    'password': DB_PASSWORD 
 }
 
 logger = logging.getLogger(__name__)
@@ -58,7 +59,6 @@ def insert_user_transfer(data):
             ))
             conn.commit()
            
-            
             if cursor.rowcount > 0:
                 logger.info(f"Inserted: {data.get('source_filename')}")
             else:
@@ -75,7 +75,7 @@ def insert_bank_transfer(row):
     conn = get_connection()
     if conn:
         cursor = conn.cursor()
-        #Added 'IGNORE' to skip duplicates silently
+        
         query = """
         INSERT IGNORE INTO bank_transfers 
         (transaction_date, amount, ref_id, phone_number)
@@ -97,7 +97,7 @@ def insert_bank_transfer(row):
                 phone
             ))
             conn.commit()
-            # Optional: Check if it was inserted or skipped
+            
             if cursor.rowcount > 0:
                 logger.info(f"Inserted Bank Ref: {row['Ref_ID']}")
             else:
@@ -112,22 +112,15 @@ def insert_bank_transfer(row):
 def run_matching_logic():
     """
     Executes the matching logic and populates matched/anomaly tables.
-    Only matches if OCR confidence was >= 0.99 (enforced in WHERE clause or Python).
     """
     conn = get_connection()
     if not conn: return
 
     cursor = conn.cursor()
     
-    # 1. Clear previous matches
-    # cursor.execute("TRUNCATE TABLE matched_transactions")
-    # cursor.execute("TRUNCATE TABLE anomaly_user_transfers")
-    # cursor.execute("TRUNCATE TABLE anomaly_bank_transfers")
-
     print("--- Running Matching Logic ---")
 
     # 2. FIND EXACT MATCHES
-    # Criteria: Amount == Amount AND Phone == Phone AND OCR Confidence >= 0.80
     match_query = """
         INSERT INTO matched_transactions 
         (user_transfer_id, bank_transfer_id, matched_amount, amount_confidence, matched_phone, phone_confidence)
@@ -150,7 +143,7 @@ def run_matching_logic():
     conn.commit()
     print(f"Matches found and stored: {matches_found}")
 
-    # 3. IDENTIFY USER ANOMALIES (Screenshots that didn't match bank)
+    # 3. IDENTIFY USER ANOMALIES
     anomaly_user_query = """
     INSERT INTO anomaly_user_transfers (user_transfer_id, amount, reason)
     SELECT u.id, u.amount, 'No matching bank record found or Low Confidence'
@@ -162,7 +155,7 @@ def run_matching_logic():
     cursor.execute(anomaly_user_query)
     conn.commit()
 
-    # 4. IDENTIFY BANK ANOMALIES (Bank records that didn't match screenshots)
+    # 4. IDENTIFY BANK ANOMALIES
     anomaly_bank_query = """
     INSERT INTO anomaly_bank_transfers (bank_transfer_id, amount, reason)
     SELECT b.id, b.amount, 'No matching user transfer found'

@@ -1,4 +1,3 @@
-# services/processor.py
 import os
 import json
 import logging
@@ -61,11 +60,21 @@ def process_single_transfer(file_path, user_id=None, user_phone=None):
             data['Transaction Date'] = parse_mysql_date(data.get('Transaction Date'))
             data['source_filename'] = filename
             
+            # --- CONDITIONAL API OVERRIDES ---
+            # This happens BEFORE confidence checking so we verify the final chosen number.
+            if user_id:
+                data['user_id'] = user_id
+                
+            # CRITICAL RULE: Only use the API phone number if the image DOES NOT have one.
+            extracted_phone = str(data.get('Mobile Number', '')).strip()
+            if user_phone and (not extracted_phone or extracted_phone.lower() == "null"):
+                data['Mobile Number'] = user_phone
+            
             # --- NEW: EXACT CONFIDENCE MATCHING ---
             amount_conf = 0.0
             phone_conf = 0.0
             
-           # Loop through the raw SuryaOCR output safely
+            # Loop through the raw SuryaOCR output safely
             for item in ocr_data:
                 text = item[0]
                 conf = item[1]
@@ -74,7 +83,6 @@ def process_single_transfer(file_path, user_id=None, user_phone=None):
                     continue
                 
                 # Check if the extracted amount is inside this raw OCR text block
-                # NEW: Drop the '.0' if it's a whole number before searching
                 search_amount = str(int(final_amount)) if final_amount.is_integer() else str(final_amount)
                 
                 if search_amount in text.replace(",", ""):
@@ -90,12 +98,6 @@ def process_single_transfer(file_path, user_id=None, user_phone=None):
             data['phone_confidence'] = phone_conf
             data['ocr_confidence'] = avg_confidence 
             
-            # --- API OVERRIDES ---
-            if user_id:
-                data['user_id'] = user_id
-            if user_phone:
-                data['Mobile Number'] = user_phone
-
             # 4. Insert into DB
             insert_user_transfer(data)
             return {"status": "success", "data": data}

@@ -57,7 +57,7 @@ def main():
             
             print(f"--- Processing {filename} ---")
             
-            # We reuse the EXACT same function the API uses!
+            # We reuse the EXACT same function the API uses for single transfers, but we run it in batch mode here.
             # We don't pass user_id or phone because we don't know them in batch mode.
             result = process_single_transfer(file_path)
             
